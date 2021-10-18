@@ -126,12 +126,16 @@ parens m = do
 -- term = factor { mulop factor }.
 -- factor = "(" expr ")" | number.
 -- addop = "+" | "-".
--- mulop = "*".
+-- mulop = "*" | "/" | "%".
+-- powop = "^".
 
 data Expr
   = Add Expr Expr
   | Mul Expr Expr
   | Sub Expr Expr
+  | Pow Expr Expr
+  | Div Expr Expr
+  | Mod Expr Expr
   | Lit Int
   deriving Show
 
@@ -140,6 +144,9 @@ eval ex = case ex of
   Add a b -> eval a + eval b
   Mul a b -> eval a * eval b
   Sub a b -> eval a - eval b
+  Pow a b -> eval a ^ eval b
+  Div a b -> eval a `div` eval b
+  Mod a b -> eval a `mod` eval b
   Lit n   -> n
 
 int :: Parser Expr
@@ -151,7 +158,10 @@ expr :: Parser Expr
 expr = term `chainl1` addop
 
 term :: Parser Expr
-term = factor `chainl1` mulop
+term = test `chainl1` mulop
+
+test :: Parser Expr
+test = factor `chainl1` powop
 
 factor :: Parser Expr
 factor =
@@ -165,7 +175,10 @@ addop :: Parser (Expr -> Expr -> Expr)
 addop = (infixOp "+" Add) <|> (infixOp "-" Sub)
 
 mulop :: Parser (Expr -> Expr -> Expr)
-mulop = infixOp "*" Mul
+mulop = (infixOp "*" Mul) <|> (infixOp "/" Div) <|> (infixOp "%" Mod)
+
+powop :: Parser (Expr -> Expr -> Expr)
+powop = infixOp "^" Pow
 
 run :: String -> Expr
 run = runParser expr
